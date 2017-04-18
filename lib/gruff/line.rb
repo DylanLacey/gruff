@@ -354,9 +354,36 @@ class Gruff::Line < Gruff::Base
       end
     end
 
+    class Cross
+      def render(d, new_x, new_y, circle_radius)
+        offset = circle_radius / 1.414
+        two_offset = offset * 2
+
+        arms = [
+          new_x - offset, new_y + two_offset,
+          new_x, new_y + offset,
+          new_x + offset, new_y + two_offset,
+          new_x + two_offset, new_y + offset,
+          new_x + offset, new_y,
+          new_x + two_offset, new_y - offset,
+          new_x + offset, new_y - two_offset,
+          new_x, new_y - offset,
+          new_x - offset, new_y - two_offset,
+          new_x - two_offset, new_y - offset,
+          new_x - offset, new_y,
+          new_x - two_offset, new_y + offset,
+          new_x - offset, new_y + two_offset
+        ]
+
+        d.polygon *arms
+      end
+    end
+
     def self.renderer(style)
       if style.to_s == 'square'
         Square.new
+      elsif style.to_s == 'cross'
+        Cross.new
       else
         Circle.new
       end
