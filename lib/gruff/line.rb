@@ -13,6 +13,8 @@ require File.dirname(__FILE__) + '/base'
 
 class Gruff::Line < Gruff::Base
 
+  DATA_VALUES_MARK_INDEX = 4
+
   # Allow for reference lines ( which are like baseline ... just allowing for more & on both axes )
   attr_accessor :reference_lines
   attr_accessor :reference_line_default_color
@@ -28,6 +30,8 @@ class Gruff::Line < Gruff::Base
   # default is a circle, other options include square
   attr_accessor :dot_style
 
+  attr_accessor :alternative_dot_style
+  attr_accessor :alternative_dot_color
   # Hide parts of the graph to fit more datapoints, or for a different appearance.
   attr_accessor :hide_dots, :hide_lines
 
@@ -127,7 +131,7 @@ class Gruff::Line < Gruff::Base
   #   In this example the lables are drawn at x positions 2, 4, and 6:
   #   g.labels = {0 => '2003', 2 => '2004', 4 => '2005', 6 => '2006'}
   #   The 0 => '2003' label will be ignored since it is outside the chart range.
-  def dataxy(name, x_data_points=[], y_data_points=[], color=nil)
+  def dataxy(name, x_data_points=[], y_data_points=[], color=nil, alternative_marks=nil)
     raise ArgumentError, 'x_data_points is nil!' if x_data_points.length == 0
 
     if x_data_points.all? { |p| p.is_a?(Array) && p.size == 2 }
@@ -142,6 +146,10 @@ class Gruff::Line < Gruff::Base
     x_data_points = Array(x_data_points) # make sure it's an array
     # append the x data to the last entry that was just added in the @data member
     @data.last[DATA_VALUES_X_INDEX] = x_data_points
+
+    if alternative_marks
+      @data.last[DATA_VALUES_ALTERNATIVE_MARK_INDEX] = alternative_marks
+    end
 
     # Update the global min/max values for the x data
     x_data_points.each do |x_data_point|
@@ -219,8 +227,8 @@ class Gruff::Line < Gruff::Base
       prev_x = prev_y = nil
 
       @one_point = contains_one_point_only?(data_row)
-
       data_row[DATA_VALUES_INDEX].each_with_index do |data_point, index|
+        x_data = data_row[DATA_VALUES_X_INDEX]
         x_data = data_row[DATA_VALUES_X_INDEX]
         if x_data == nil
           #use the old method: equally spaced points along the x-axis
@@ -252,12 +260,23 @@ class Gruff::Line < Gruff::Base
         if !@hide_lines && !prev_x.nil? && !prev_y.nil?
           @d = @d.line(prev_x, prev_y, new_x, new_y)
         elsif @one_point
-          # Show a circle if there's just one_point
-          @d = DotRenderers.renderer(@dot_style).render(@d, new_x, new_y, circle_radius)
+          @d = DotRenderers.renderer(dot_style).render(@d, new_x, new_y, circle_radius)
+        end
+
+        dot_style = @dot_style
+        if data_row[DATA_VALUES_MARK_INDEX] 
+          if data_row[DATA_VALUES_MARK_INDEX][index]
+            dot_style = @alternative_dot_style
+
+            if @alternative_dot_color
+              @d = @d.fill @alternative_dot_color
+              @d = @d.stroke @alternative_dot_color
+            end
+          end
         end
 
         unless @hide_dots
-          @d = DotRenderers.renderer(@dot_style).render(@d, new_x, new_y, circle_radius)
+          @d = DotRenderers.renderer(dot_style).render(@d, new_x, new_y, circle_radius)
         end
 
         prev_x, prev_y = new_x, new_y
@@ -308,6 +327,8 @@ class Gruff::Line < Gruff::Base
         end
         @norm_data[index] << norm_x_data_points
       end
+
+      @norm_data[index][DATA_VALUES_ALTERNATIVE_MARK_INDEX] = data_row[DATA_VALUES_ALTERNATIVE_MARK_INDEX]
     end
 
   end
