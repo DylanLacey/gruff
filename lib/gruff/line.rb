@@ -13,8 +13,6 @@ require File.dirname(__FILE__) + '/base'
 
 class Gruff::Line < Gruff::Base
 
-  DATA_VALUES_MARK_INDEX = 4
-
   # Allow for reference lines ( which are like baseline ... just allowing for more & on both axes )
   attr_accessor :reference_lines
   attr_accessor :reference_line_default_color
@@ -225,6 +223,7 @@ class Gruff::Line < Gruff::Base
 
     @norm_data.each do |data_row|
       prev_x = prev_y = nil
+      plotted_previous = plot_current = true
 
       @one_point = contains_one_point_only?(data_row)
       data_row[DATA_VALUES_INDEX].each_with_index do |data_point, index|
@@ -257,22 +256,15 @@ class Gruff::Line < Gruff::Base
         circle_radius = dot_radius ||
             clip_value_if_greater_than(@columns / (@norm_data.first[DATA_VALUES_INDEX].size * 2.5), 5.0)
 
-        if !@hide_lines && !prev_x.nil? && !prev_y.nil?
+        plotted_previous = plot_current
+        plot_current = !(data_row[DATA_VALUES_ALTERNATIVE_MARK_INDEX] && data_row[DATA_VALUES_ALTERNATIVE_MARK_INDEX][index])
+
+        display_lines = !@hide_lines && plotted_previous && plot_current
+
+        if display_lines && !prev_x.nil? && !prev_y.nil?
           @d = @d.line(prev_x, prev_y, new_x, new_y)
         elsif @one_point
           @d = DotRenderers.renderer(dot_style).render(@d, new_x, new_y, circle_radius)
-        end
-
-        dot_style = @dot_style
-        if data_row[DATA_VALUES_MARK_INDEX] 
-          if data_row[DATA_VALUES_MARK_INDEX][index]
-            dot_style = @alternative_dot_style
-
-            if @alternative_dot_color
-              @d = @d.fill @alternative_dot_color
-              @d = @d.stroke @alternative_dot_color
-            end
-          end
         end
 
         unless @hide_dots
